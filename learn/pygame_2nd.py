@@ -22,7 +22,6 @@ def create_grid(orig_surface,cell_size=32,color=(127,127,127,255)):
 class Mob:
     def __init__(self,img,position,speed):
         self.img=pygame.image.load(img).convert_alpha()
-        self.shade=self.img.copy()
         self.y=position
         self.x=0
         self.speed=speed
@@ -32,17 +31,22 @@ class Mob:
         distance=(time.time()-self.last_update)*self.speed
         self.last_update=time.time()
         self.x+=distance
-        if self.x<=surface.get_width()-self.img.get_width():
-            surface.blit(self.img,(int(self.x),self.y))
-
+        if self.x<0:
+            self.x=0
+            self.speed=-self.speed
+        if self.x>surface.get_width()-self.img.get_width():
+            self.x=surface.get_width()-self.img.get_width()
+            self.speed=-self.speed
+        surface.blit(self.img,(self.x,self.y))
 
 if __name__ == "__main__":
     SCREEN_SIZE=(800,600)
     pygame.init()
     clock=pygame.time.Clock()
     disp=pygame.display.set_mode(SCREEN_SIZE,pygame.DOUBLEBUF)
+    pygame.display.set_caption("Cats race")
     grid=create_grid(disp)
-    mobs=[Mob(random.choice(('2_1.png','2_2.png')),i*32+1,random.random()*32) for i in xrange (int(SCREEN_SIZE[1]/32))]
+    mobs=[Mob(random.choice(('2_1.png','2_2.png')),i*32+1,random.random()*16+48) for i in xrange (int(SCREEN_SIZE[1]/32))]
     msg=""
     while True:
         events=pygame.event.get()
