@@ -46,16 +46,21 @@ if __name__ == "__main__":
     disp=pygame.display.set_mode(SCREEN_SIZE,pygame.DOUBLEBUF)
     pygame.display.set_caption("Cats race")
     grid=create_grid(disp)
-    mobs=[Mob(random.choice(('2_1.png','2_2.png')),i*32+1,random.random()*16+48) for i in xrange (int(SCREEN_SIZE[1]/32))]
+    default_font=pygame.font.get_default_font()
+    font=pygame.font.SysFont(default_font,32)
     msg=""
+
+    mobs=[Mob(random.choice(('2_1.png','2_2.png')),i*32+1,random.random()*16+48) for i in xrange (int(SCREEN_SIZE[1]/32))]
     while True:
-        events=pygame.event.get()
-        if pygame.QUIT in events:
-            pygame.quit()
-            break
-        elif [event for event in events if event.type==pygame.KEYUP]:
-            pass
+        for event in pygame.event.get():
+            if event.type==pygame.QUIT:
+                pygame.quit()
+                break
+            if event.type==pygame.KEYDOWN:
+                print event
+                msg+=event.unicode
         disp.blit(grid,(0,0))
+        disp.blit(font.render(msg,True,(240,0,0,255)),(0,0))
         for mob in mobs:
             mob.draw(disp)
         pygame.display.flip()
