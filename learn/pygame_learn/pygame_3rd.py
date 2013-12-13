@@ -20,6 +20,11 @@ class AreaMap:
         self.queue = [(x,y) for x in range(self.size[0]) for y in range (self.size[1])]
         self.update_rects = []
 
+    def clear(self):
+        for x in range(self.size[0]):
+            for y in range (self.size[1]):
+                self.set_cell(False,(x,y))
+
     def pos(self, pos):
         '''convert position to block number, take (x,y), return x,y'''
         return pos[0]/self.cell_size[0], pos[1]/self.cell_size[1]
@@ -44,8 +49,8 @@ class AreaMap:
             self.set_cell_by_pos(value,pos) #trivial - one cell changed
             return
         print "non-trivial case:", pos, rel
-        div_round_to_infinity = lambda a, b: (a+(-a%b))//b # http://stackoverflow.com/questions/7181757/how-to-implement-division-with-round-towards-infinity-in-python
-        point_calc = lambda pos,rel, step, steps, size, index: pos[index] - rel[index] + div_round_to_infinity(rel[index]*step, steps)
+        div_round_to_infinity = lambda a, b: a//b if a*b<0 else (a+(-a%b))//b # http://stackoverflow.com/questions/7181757/how-to-implement-division-with-round-towards-infinity-in-python
+        point_calc = lambda pos,rel, step, steps, size, index: pos[index] - rel[index] + rel[index]*step//steps
         steps = div_round_to_infinity(max(rel), min(self.cell_size))
         for step in range(0, steps):
             print "step:", step
@@ -104,10 +109,16 @@ if __name__ == '__main__':
             pygame.quit()
             break
         elif event.type == pygame.MOUSEBUTTONDOWN:
-            state = not area.get_cell_by_pos(event.pos)
-            area.set_cell_by_pos(state, event.pos)
+            if event.button == 1:
+                state = not area.get_cell_by_pos(event.pos)
+                area.set_cell_by_pos(state, event.pos)
+                prev = event.pos
+            if event.button == 2:
+                area.clear()
         elif event.type == pygame.MOUSEMOTION:
             if event.buttons[0]:
-                area.set_cells_by_strike(state,event.pos,event.rel)
+                rel=map(int.__sub__,prev,event.pos) #workaround for fast mouse movements
+                area.set_cells_by_strike(state,event.pos,rel)
+                prev=event.pos
         area.update(disp)
 
