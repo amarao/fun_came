@@ -31,28 +31,40 @@ class AreaMap:
         return self.area[index[0]][index[1]]
 
     def set_cell(self,value,(x,y)):
-        print "pos:", x,y, "old:", self.area[x][y], "new:", value
         if self.area[x][y] != value:
             self.area[x][y] = value
             self.queue.append((x, y))
-            print "adding to queue", self.queue, (x,y)
-        print self.area
 
     def set_cell_by_pos(self,value,pos):
-        print "Set cell by pos",pos,self.pos(pos)
         self.set_cell(value,self.pos(pos))
 
-#    def invert_cell(self, x, y):
-#        self.area[x][y] = not self.area[x][y]
-#        self.queue.append((x, y))
+    def set_cells_by_strike(self,value,pos,rel):
+        '''operates on every cell under single mouse move'''
+        if max(rel)<min(self.cell_size):
+            self.set_cell_by_pos(value,pos) #trivial - one cell changed
+            return
+        print "non-trivial case:", pos, rel
+        div_round_to_infinity = lambda a, b: (a+(-a%b))//b # http://stackoverflow.com/questions/7181757/how-to-implement-division-with-round-towards-infinity-in-python
+        point_calc = lambda pos,rel, step, steps, size, index: pos[index] - rel[index] + div_round_to_infinity(rel[index]*step, steps)
+        steps = div_round_to_infinity(max(rel), min(self.cell_size))
+        for step in range(0, steps):
+            print "step:", step
+            x = point_calc(pos, rel, step, steps, self.cell_size, 0)
+            y = point_calc(pos, rel, step, steps, self.cell_size, 1)
+            print "doing:", x, y
+            self.set_cell_by_pos(value, (x,y))
 
-#    def invert_column(self, y):
-#        for x in range(self.size[0]):
-#            self.invert_cell(self, x, y)
+    def invert_cell(self, x, y):
+        self.area[x][y] = not self.area[x][y]
+        self.queue.append((x, y))
 
-#    def invert_row(self,x):
-#        for y in range(self,size[1]):
-#            self.invert_cell(self, x, y)
+    def invert_column(self, y):
+        for x in range(self.size[0]):
+            self.invert_cell(self, x, y)
+
+    def invert_row(self,x):
+        for y in range(self,size[1]):
+            self.invert_cell(self, x, y)
 
     def update_cell(self, disp, cell):
         reg_x = cell[0]*self.cell_size[0]
@@ -65,6 +77,8 @@ class AreaMap:
         self.update_rects.append(pygame.rect.Rect((reg_x, reg_y), self.cell_size))
 
     def update(self, disp):
+        if not self.queue:
+            return
         for item in self.queue:
             self.update_cell( disp, item)
         if self.update_rects:
@@ -72,19 +86,16 @@ class AreaMap:
         self.queue=[]
         self.update_rects=[]
 
-    def debug(self,disp):
-        disp.blit(self.fill,(0,0))
-        disp.blit(self.empty,(100,100))
-
 if __name__ == '__main__':
     pygame.init()
-#    clock = pygame.time.Clock()
     disp = pygame.display.set_mode(SCREEN_SIZE,pygame.DOUBLEBUF)
     default_font = pygame.font.get_default_font()
     font = pygame.font.SysFont(default_font,32)
     msg = font.render("Click anywere",True,(230,230,30,255))
     area = AreaMap((20,20),"3_empty.png","3_fill.png")
+#    area.set_cells_by_strike(True,(630,630),(100,630))
     area.update(disp)
+#    time.sleep(100)
     state = False
     while True:
         pygame.event.pump()
@@ -93,13 +104,10 @@ if __name__ == '__main__':
             pygame.quit()
             break
         elif event.type == pygame.MOUSEBUTTONDOWN:
-            print "mouse down"
             state = not area.get_cell_by_pos(event.pos)
             area.set_cell_by_pos(state, event.pos)
         elif event.type == pygame.MOUSEMOTION:
             if event.buttons[0]:
-                print "\n\nCurrent state:", state, "cell state",area.get_cell_by_pos(event.pos)
-                area.set_cell_by_pos(state,event.pos)
-    
+                area.set_cells_by_strike(state,event.pos,event.rel)
         area.update(disp)
 
