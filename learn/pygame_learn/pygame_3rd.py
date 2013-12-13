@@ -4,6 +4,9 @@
 #right click invert row, middle click - column
 import pygame
 import time
+import sys
+SCREEN_SIZE=(640,640)
+#FPS=50
 
 class AreaMap:
     def __init__(self, size, empty_image, filled_image ):
@@ -12,30 +15,91 @@ class AreaMap:
         if self.empty.get_size() != self.fill.get_size():
             raise Exception("Fill/empty images not the same size")
         self.cell_size = self.empty.get_size()
-        self.size=size
-        self.area = [[False]*self.size[0]]*self.size[1] #size[0] X size=[1] 2D array of 'falses'
+        self.size = size
+        self.area = [[ False for y in range(self.size[1])] for x in range(self.size[0])] #init 2D array with falses
+        self.queue = [(x,y) for x in range(self.size[0]) for y in range (self.size[1])]
+        self.update_rects = []
 
-    def invert_cell(self,x,y):
-        self.area[x][y] = not self.area[x][y]
-        self.update+=[(x,y)]
+    def pos(self, pos):
+        '''convert position to block number, take (x,y), return x,y'''
+        return pos[0]/self.cell_size[0], pos[1]/self.cell_size[1]
 
-    def invert_column(self,y):
-        for x in range(self.size[0]):
-            self.invert_cell(self,x,y)
+    def get_cell_by_pos(self, pos):
+        return self.get_cell(self.pos(pos))
 
-    def invert_row(self,x):
-        for y in range(self,size[1]):
-            self.invert_cell(self,x,y)
+    def get_cell(self, index):
+        return self.area[index[0]][index[1]]
 
-    def update(self,disp):
-        pass
+    def set_cell(self,value,(x,y)):
+        print "pos:", x,y, "old:", self.area[x][y], "new:", value
+        if self.area[x][y] != value:
+            self.area[x][y] = value
+            self.queue.append((x, y))
+            print "adding to queue", self.queue, (x,y)
+        print self.area
 
-if name == '__main__':
+    def set_cell_by_pos(self,value,pos):
+        print "Set cell by pos",pos,self.pos(pos)
+        self.set_cell(value,self.pos(pos))
+
+#    def invert_cell(self, x, y):
+#        self.area[x][y] = not self.area[x][y]
+#        self.queue.append((x, y))
+
+#    def invert_column(self, y):
+#        for x in range(self.size[0]):
+#            self.invert_cell(self, x, y)
+
+#    def invert_row(self,x):
+#        for y in range(self,size[1]):
+#            self.invert_cell(self, x, y)
+
+    def update_cell(self, disp, cell):
+        reg_x = cell[0]*self.cell_size[0]
+        reg_y = cell[1]*self.cell_size[1]
+        if self.area[cell[0]][cell[1]]:
+            pattern = self.fill
+        else:
+            pattern = self.empty
+        disp.blit(pattern,(reg_x,reg_y))
+        self.update_rects.append(pygame.rect.Rect((reg_x, reg_y), self.cell_size))
+
+    def update(self, disp):
+        for item in self.queue:
+            self.update_cell( disp, item)
+        if self.update_rects:
+            pygame.display.update(self.update_rects)
+        self.queue=[]
+        self.update_rects=[]
+
+    def debug(self,disp):
+        disp.blit(self.fill,(0,0))
+        disp.blit(self.empty,(100,100))
+
+if __name__ == '__main__':
     pygame.init()
-    clock=pygame.time.Clock()
-    disp=pygame.display.set_mode(SCREEN_SIZE,pygame.DOUBLEBUF)
-    default_font=pygame.font.get_default_font()
-    font=pygame.font.SysFont(default_font,32)
-    msg=font.render("Click anywere",True,(30,30,30,255))
-
+#    clock = pygame.time.Clock()
+    disp = pygame.display.set_mode(SCREEN_SIZE,pygame.DOUBLEBUF)
+    default_font = pygame.font.get_default_font()
+    font = pygame.font.SysFont(default_font,32)
+    msg = font.render("Click anywere",True,(230,230,30,255))
+    area = AreaMap((20,20),"3_empty.png","3_fill.png")
+    area.update(disp)
+    state = False
+    while True:
+        pygame.event.pump()
+        event=pygame.event.wait()
+        if event.type == pygame.QUIT:
+            pygame.quit()
+            break
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+            print "mouse down"
+            state = not area.get_cell_by_pos(event.pos)
+            area.set_cell_by_pos(state, event.pos)
+        elif event.type == pygame.MOUSEMOTION:
+            if event.buttons[0]:
+                print "\n\nCurrent state:", state, "cell state",area.get_cell_by_pos(event.pos)
+                area.set_cell_by_pos(state,event.pos)
     
+        area.update(disp)
+
