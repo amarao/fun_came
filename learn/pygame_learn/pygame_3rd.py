@@ -45,13 +45,14 @@ class AreaMap:
 
     def set_cells_by_strike(self,value,pos,rel):
         '''operates on every cell under single mouse move'''
-        if max(rel)<min(self.cell_size):
+        offset=max(map(abs,rel))
+        if offset<min(self.cell_size):
             self.set_cell_by_pos(value,pos) #trivial - one cell changed
             return
         print "non-trivial case:", pos, rel
         div_round_to_infinity = lambda a, b: a//b if a*b<0 else (a+(-a%b))//b # http://stackoverflow.com/questions/7181757/how-to-implement-division-with-round-towards-infinity-in-python
-        point_calc = lambda pos,rel, step, steps, size, index: pos[index] - rel[index] + rel[index]*step//steps
-        steps = div_round_to_infinity(max(rel), min(self.cell_size))
+        point_calc = lambda pos,rel, step, steps, size, index: pos[index] - rel[index] + div_round_to_infinity(rel[index]*step, steps)
+        steps = div_round_to_infinity(offset, min(self.cell_size))
         for step in range(0, steps):
             print "step:", step
             x = point_calc(pos, rel, step, steps, self.cell_size, 0)
@@ -98,7 +99,7 @@ if __name__ == '__main__':
     font = pygame.font.SysFont(default_font,32)
     msg = font.render("Click anywere",True,(230,230,30,255))
     area = AreaMap((20,20),"3_empty.png","3_fill.png")
-#    area.set_cells_by_strike(True,(630,630),(100,630))
+#    area.set_cells_by_strike(True,(300,300),(-300,0))
     area.update(disp)
 #    time.sleep(100)
     state = False
@@ -117,7 +118,8 @@ if __name__ == '__main__':
                 area.clear()
         elif event.type == pygame.MOUSEMOTION:
             if event.buttons[0]:
-                rel=map(int.__sub__,prev,event.pos) #workaround for fast mouse movements
+                rel=map(int.__sub__,event.pos,prev) #workaround for fast mouse movements
+                print rel
                 area.set_cells_by_strike(state,event.pos,rel)
                 prev=event.pos
         area.update(disp)
