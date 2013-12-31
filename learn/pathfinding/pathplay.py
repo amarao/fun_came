@@ -17,8 +17,29 @@ import time
 import sys
 SCREEN_SIZE=(800,640)
 FPS=50
+
+class Creep(object): #no animation yet
+    def __init__(self,sprite, cell_size,initial_pos):
+        self.sprite=pygame.image.load(sprite).convert_alpha()
+        self.cell_size=cell_size
+        self.pos=initial_pos
+    
+    def make_move(self,area):
+        pass
+
+    def get_pixel_position(self):
+        return (self.pos[0]*self.cell_size[0],self.pos[1]*self.cell_size[1])
+
+    def update(self,surface):
+        '''
+            make a blit, return update rect
+        '''
+        surface.blit(self.sprite,self.get_pixel_position())
+        return pygame.Rect(self.get_pixel_position(),self.sprite.get_size())
+
 class AreaMap:
     def __init__(self, size, empty_image, filled_image, message=None):
+        self.size=size
         self.empty = pygame.image.load(empty_image).convert()
         fill = pygame.image.load(filled_image).convert_alpha()
         self.fill = self.empty.copy()
@@ -36,11 +57,28 @@ class AreaMap:
         self.update_rects = []
         self.message=message
         
+    def shift(self, (x,y), (shift_x, shift_y)):
+        return x+shift_x, y+shift_y
+
+    def get_edges(self, x, y):
+        '''
+            return accessible edges in graph for specified vertex
+            finish & stop are accessible
+
+            return value: list of edges, each edge - pair of coordinates
+        '''
+        accessible=[]
+        for shift in ( (-1,-1), (-1,0), (-1,1), (0,-1), (0,1), (1,-1), (1,0), (1,1) ):
+            if self.get_cell(self.shift((x,y), shift) ) == None: #Only None field is accessible
+                accessible.append((self.shift((x,y),shift)))
+        return accessible
+
     def add_start(self, x, y):
         '''
             add start point to area
         '''
         self.area[x][y] = "Start"
+        self.mob=Creep("mob.png",self.cell_size,(x,y))
         self.queue.add((x, y))
 
 
@@ -64,6 +102,8 @@ class AreaMap:
         return self.get_cell(self.pos(pos))
 
     def get_cell(self, index):
+        if index[0] < 0 or index [1] < 0 or index [0] >= self.size[0] or index[1] >= self.size[1]:
+            return "Unaccessible"
         return self.area[index[0]][index[1]]
 
     def set_cell(self,value,(x,y)):
@@ -131,6 +171,7 @@ class AreaMap:
             return
         for item in self.queue:
             self.update_cell( disp, item)
+        self.update_rects.append(self.mob.update(disp))
         if self.message:
             if self.message.get_rect().collidelist(self.update_rects) != -1:
                 disp.blit(self.message, (0, 0))
