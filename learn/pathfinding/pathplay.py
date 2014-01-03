@@ -19,13 +19,15 @@ SCREEN_SIZE=(800,640)
 FPS=50
 
 class Creep(object): #no animation yet
-    def __init__(self,sprite, cell_size,initial_pos):
+    def __init__(self,sprite, cell_size,initial_pos,finish):
         self.sprite = pygame.image.load(sprite).convert_alpha()
+        self.start=initial_pos
+        self.finish=finish
         self.cell_size = cell_size
         self.pos = initial_pos
         self.speed = 25
         self.delay = self.speed
-        self.pathfind=[]
+        self.path=[]
 
     def move(self,area):
         if self.delay:
@@ -37,15 +39,20 @@ class Creep(object): #no animation yet
         if area.get_cell(self.pos) == "Finish":
             self.pos = area.get_start()
             self.path = None
-        if self.pathfind:
+        if self.path:
             old_pos=self.pos
-            self.pos=self.pathfind.pop()
-            print "old",old_pos, "new:", self.pos
-            return old_pos
+            new_pos=self.path.pop()
+            if self.validate(new_pos):
+                self.pos=new_pos
+                return old_pos
+            else:
+                self.path=self.pathfind(area)
         else:
             print "*",
-            self.pathfind=self.a_star_pathfind(self.pos, area)
-            return self.pos
+            self.path=self.pathfind( area)
+
+    def validate(self, pos):
+        return True
 
     def get_pixel_position(self):
         print "position", (self.pos[0]*self.cell_size[0],self.pos[1]*self.cell_size[1])
@@ -58,7 +65,7 @@ class Creep(object): #no animation yet
         surface.blit(self.sprite,self.get_pixel_position())
         return pygame.Rect(self.get_pixel_position(),self.cell_size)
 
-    def a_star_pathfind(self,pos,area):
+    def pathfind(self,area):
         '''
             Implements a* pathfinding algorithm. http://en.wikipedia.org/wiki/A*_search_algorithm
         '''
