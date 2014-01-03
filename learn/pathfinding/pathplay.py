@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python -u
 '''
     Targets:
         * Create framework for path finding: 
@@ -20,14 +20,35 @@ FPS=50
 
 class Creep(object): #no animation yet
     def __init__(self,sprite, cell_size,initial_pos):
-        self.sprite=pygame.image.load(sprite).convert_alpha()
-        self.cell_size=cell_size
-        self.pos=initial_pos
-    
-    def make_move(self,area):
-        pass
+        self.sprite = pygame.image.load(sprite).convert_alpha()
+        self.cell_size = cell_size
+        self.pos = initial_pos
+        self.speed = 25
+        self.delay = self.speed
+        self.pathfind=[]
+
+    def move(self,area):
+        if self.delay:
+            self.delay -= 1
+            return None
+        else:
+            self.delay = self.speed
+        print "+",
+        if area.get_cell(self.pos) == "Finish":
+            self.pos = area.get_start()
+            self.path = None
+        if self.pathfind:
+            old_pos=self.pos
+            self.pos=self.pathfind.pop()
+            print "old",old_pos, "new:", self.pos
+            return old_pos
+        else:
+            print "*",
+            self.pathfind=self.a_star_pathfind(self.pos, area)
+            return self.pos
 
     def get_pixel_position(self):
+        print "position", (self.pos[0]*self.cell_size[0],self.pos[1]*self.cell_size[1])
         return (self.pos[0]*self.cell_size[0],self.pos[1]*self.cell_size[1])
 
     def update(self,surface):
@@ -35,7 +56,14 @@ class Creep(object): #no animation yet
             make a blit, return update rect
         '''
         surface.blit(self.sprite,self.get_pixel_position())
-        return pygame.Rect(self.get_pixel_position(),self.sprite.get_size())
+        return pygame.Rect(self.get_pixel_position(),self.cell_size)
+
+    def a_star_pathfind(self,pos,area):
+        '''
+            Implements a* pathfinding algorithm. http://en.wikipedia.org/wiki/A*_search_algorithm
+        '''
+        #not really, just stub to test the rest
+        return [(a,a) for a in xrange(20)]
 
 class AreaMap:
     def __init__(self, size, empty_image, filled_image, message=None):
@@ -88,6 +116,18 @@ class AreaMap:
         '''
         self.area[x][y] = "Finish"
         self.queue.add((x, y))
+
+    def get_start(self):
+        for x in self.size[0]:
+            for y in self.size[y]:
+                if self.area[x][y]=="Start":
+                    return (x,y)
+
+    def get_finish(self):
+        for x in self.size[0]:
+            for y in self.size[y]:
+                if self.area[x][y]=="Finish":
+                    return (x,y)
 
     def clear(self):
         for x in range(self.size[0]):
@@ -154,6 +194,7 @@ class AreaMap:
     def update_cell(self, disp, cell):
         reg_x = cell[0]*self.cell_size[0]
         reg_y = cell[1]*self.cell_size[1]
+        print "updating:", cell, reg_x, reg_y
         if self.area[cell[0]][cell[1]]== True:
             pattern = self.fill
         elif self.area[cell[0]][cell[1]] == False:
@@ -162,11 +203,18 @@ class AreaMap:
             pattern = self.finish
         elif self.area[cell[0]][cell[1]] == "Start":
             pattern = self.start
+        else:
+            print "wat?"
         disp.blit(pattern,(reg_x, reg_y))
         reg=pygame.rect.Rect((reg_x, reg_y), self.cell_size)
         self.update_rects.append(reg)
+#        print "update_rects", self.update_rects
 
     def update(self, disp):
+        mob_old_pos = self.mob.move(self)
+        if mob_old_pos:
+            self.queue.add(mob_old_pos)
+            print "old", mob_old_pos, self.queue
         if not self.queue:
             return
         for item in self.queue:
